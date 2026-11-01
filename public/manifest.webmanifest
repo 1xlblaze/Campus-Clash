@@ -1,0 +1,10 @@
+{
+  "name": "Campus Clash",
+  "short_name": "Campus Clash",
+  "description": "Play anywhere. Challenge everyone. Represent your campus.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0D1020",
+  "theme_color": "#0D1020",
+  "icons": []
+}
