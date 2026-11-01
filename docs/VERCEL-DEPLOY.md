@@ -65,6 +65,8 @@ Add **Repository secrets** on `Campus-Clash`:
 
 After secrets exist, push to `Project1` or run **Deploy to Vercel** manually from the Actions tab.
 
+> **Note:** Pushing `.github/workflows/*.yml` to GitHub requires a PAT with the **`workflow`** scope. If your token lacks it, create the workflow file in the GitHub UI or use **Git import on Vercel** (section 1) instead.
+
 ## 4. Verify
 
 - Home loads and **Quick play** works.
