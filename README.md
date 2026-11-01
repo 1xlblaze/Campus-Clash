@@ -18,7 +18,11 @@ npm run dev
 ```
 Open http://localhost:43123 (or the port you choose).
 
-Without Supabase env vars the app falls back to **demo scoring** on the device. With Supabase configured, scores are **verified on the server** via RPC functions (see `supabase/README.md`).
+### Deploy on Vercel
+
+See **[docs/VERCEL-DEPLOY.md](docs/VERCEL-DEPLOY.md)** for Git import, CLI token deploy, and GitHub Actions secrets (including Supabase env vars).
+
+Without Supabase env vars the app falls back to **demo scoring** on the device. With Supabase configured, scores are **verified on the server** via RPC functions (see `supabase/README.md`). Optional **email/password accounts** at `/account` link guest rounds after sign-in.
 
 ## Important
 Never expose a service-role key in browser code. Leaderboards and challenges use verified sessions only.
