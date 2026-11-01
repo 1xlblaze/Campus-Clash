@@ -3,18 +3,16 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Settings2 } from "lucide-react";
-import { DiceRoll } from "@/components/board/DiceRoll";
+import { LudoKingBoard } from "@/components/board/LudoKingBoard";
 import { PlayModeGate } from "@/components/board/PlayModeGate";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
 import { getOrCreateGuestToken } from "@/lib/guest-session";
 import type { PlayMode } from "@/lib/multiplayer/types";
 import {
   applyLudoMove,
-  cpuPickToken,
   createLudo,
   ludoRoll,
   ludoTurnSeat,
-  trackPosition,
   type LudoState,
 } from "@/lib/ludo/game";
 
@@ -61,26 +59,15 @@ export default function LudoPage() {
     }
   };
 
-  const canRoll =
-    !game.winner &&
-    !rolling &&
-    game.mustRoll &&
-    (mode === "local" ||
-      (mode === "cpu" && game.turn === "you") ||
-      (mode === "online" &&
-        Boolean(online?.isMyTurn) &&
-        ((onlineMeta?.role === "host" && game.turn === "you") ||
-          (onlineMeta?.role === "guest" && game.turn === "cpu"))));
+  const isYourTurn =
+    mode === "local" ||
+    (mode === "cpu" && game.turn === "you") ||
+    (mode === "online" &&
+      Boolean(online?.isMyTurn) &&
+      ((onlineMeta?.role === "host" && game.turn === "you") ||
+        (onlineMeta?.role === "guest" && game.turn === "cpu")));
 
-  const canPick =
-    !game.mustRoll &&
-    !game.winner &&
-    (mode === "local" ||
-      (mode === "cpu" && game.turn === "you") ||
-      (mode === "online" &&
-        Boolean(online?.isMyTurn) &&
-        ((onlineMeta?.role === "host" && game.turn === "you") ||
-          (onlineMeta?.role === "guest" && game.turn === "cpu"))));
+  const canRoll = !game.winner && !rolling && game.mustRoll && !game.pickToken && isYourTurn;
 
   const syncOnline = useCallback(
     (next: LudoState) => {
@@ -95,7 +82,7 @@ export default function LudoPage() {
     (forCpu = false) => {
       if (rolling || game.winner) return;
       if (forCpu) {
-        if (modeRef.current !== "cpu" || game.turn !== "cpu" || !game.mustRoll) return;
+        if (modeRef.current !== "cpu" || game.turn !== "cpu" || !game.mustRoll || game.pickToken) return;
       } else if (!canRoll) return;
 
       setRolling(true);
@@ -103,27 +90,24 @@ export default function LudoPage() {
       window.setTimeout(() => {
         setDice(value);
         setGame((g) => {
-          let next = ludoRoll(g, value);
-          if (modeRef.current === "cpu" && next.turn === "cpu" && !next.mustRoll && !next.winner) {
-            next = applyLudoMove(next, cpuPickToken(next, value), value);
-          }
+          const next = ludoRoll(g, value);
           syncOnline(next);
           return next;
         });
         setRolling(false);
       }, 650);
     },
-    [canRoll, game.mustRoll, game.turn, game.winner, rolling, syncOnline]
+    [canRoll, game.mustRoll, game.pickToken, game.turn, game.winner, rolling, syncOnline]
   );
 
   useEffect(() => {
-    if (mode !== "cpu" || game.winner || game.turn !== "cpu" || !game.mustRoll || rolling) return;
-    const t = window.setTimeout(() => doRoll(true), 800);
+    if (mode !== "cpu" || game.winner || game.turn !== "cpu" || !game.mustRoll || game.pickToken || rolling) return;
+    const t = window.setTimeout(() => doRoll(true), 900);
     return () => window.clearTimeout(t);
-  }, [mode, game.turn, game.mustRoll, game.winner, rolling, doRoll]);
+  }, [mode, game.turn, game.mustRoll, game.pickToken, game.winner, rolling, doRoll]);
 
   const pickToken = (id: number) => {
-    if (!canPick) return;
+    if (!game.pickToken || !isYourTurn) return;
     setGame((g) => {
       const next = applyLudoMove(g, id, g.lastRoll);
       syncOnline(next);
@@ -131,8 +115,9 @@ export default function LudoPage() {
     });
   };
 
-  const p1Label = mode === "local" ? "Player 1" : mode === "cpu" ? "You" : onlineMeta?.role === "guest" ? "Host" : "You";
-  const p2Label = mode === "local" ? "Player 2" : mode === "cpu" ? "CPU" : onlineMeta?.role === "guest" ? "You" : "Guest";
+  const youLabel = mode === "local" ? "Player 1 (Red)" : mode === "cpu" ? "You (Red)" : onlineMeta?.role === "guest" ? "Host (Red)" : "You (Red)";
+  const cpuLabel = mode === "local" ? "Player 2 (Yellow)" : mode === "cpu" ? "CPU (Yellow)" : onlineMeta?.role === "guest" ? "You (Yellow)" : "Guest (Yellow)";
+  const turnLabel = game.turn === "you" ? youLabel.split(" (")[0] : cpuLabel.split(" (")[0];
 
   if (screen === "gate") {
     return (
@@ -141,14 +126,14 @@ export default function LudoPage() {
           <ArrowLeft className="mr-1 inline h-4 w-4" />
           Lobby
         </Link>
-        <PlayModeGate gameType="ludo" title="Ludo Rush" initialState={createLudo()} onStart={start} />
+        <PlayModeGate gameType="ludo" title="Ludo King" initialState={createLudo()} onStart={start} />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen board-felt glow-bg px-4 py-6">
-      <div className="mx-auto max-w-md">
+    <main className="min-h-screen board-felt glow-bg px-3 py-5">
+      <div className="mx-auto max-w-lg">
         <div className="flex items-center justify-between">
           <Link href="/play" className="text-sm text-white/50">
             <ArrowLeft className="mr-1 inline h-4 w-4" />
@@ -159,90 +144,36 @@ export default function LudoPage() {
             Modes
           </button>
         </div>
-        <h1 className="display mt-4 text-3xl font-bold">Ludo Rush</h1>
-        <p className="mt-1 text-xs text-white/40">
-          {mode === "cpu" ? "Vs CPU" : mode === "local" ? "Pass & play" : "Online"}
+        <h1 className="display mt-3 text-center text-2xl font-bold">Ludo King</h1>
+        <p className="mt-1 text-center text-xs text-white/45">
+          {mode === "cpu" ? "Vs CPU" : mode === "local" ? "Pass & play" : "Online"} · 4 tokens · classic board
         </p>
-        {roomBanner && <p className="mt-1 font-mono text-xs text-cyan">{roomBanner}</p>}
-        <p className="mt-2 text-sm text-white/55">
-          {game.turn === "you" ? p1Label : p2Label}&apos;s turn · {game.message}
-        </p>
+        {roomBanner && <p className="mt-1 text-center font-mono text-xs text-cyan">{roomBanner}</p>}
+        <p className="mt-2 text-center text-sm text-violet-100">{game.message}</p>
+        <p className="text-center text-xs text-white/40">{turnLabel}&apos;s turn</p>
 
-        <div className="relative mx-auto mt-6 aspect-square max-w-sm rounded-3xl border-4 border-white/15 bg-gradient-to-br from-violet/30 to-cyan/20 p-3 shadow-2xl">
-          <div className="absolute inset-3 grid grid-cols-7 grid-rows-7 gap-1 rounded-2xl bg-panel/90">
-            {Array.from({ length: 49 }).map((_, i) => {
-              const x = i % 7;
-              const y = Math.floor(i / 7);
-              const isPath = y === 0 || x === 6 || y === 6 || x === 0 || (x >= 2 && x <= 4 && y >= 2 && y <= 4);
-              return (
-                <div key={i} className={`relative rounded-md ${isPath ? "bg-white/10" : "bg-white/5"}`}>
-                  <BoardTokens game={game} x={x} y={y} />
-                </div>
-              );
-            })}
-          </div>
-          <YardTokens game={game} side="you" className="left-4 top-4" color="#8066ED" />
-          <YardTokens game={game} side="cpu" className="right-4 bottom-4" color="#18C6D4" />
+        <div className="mt-4">
+          <LudoKingBoard
+            game={game}
+            dice={dice}
+            rolling={rolling}
+            onRoll={() => doRoll(false)}
+            rollDisabled={!canRoll}
+            onPickToken={pickToken}
+            pickEnabled={game.pickToken && isYourTurn}
+            youLabel={youLabel}
+            cpuLabel={cpuLabel}
+          />
         </div>
 
-        {!game.mustRoll && canPick && (
-          <div className="mt-4 flex justify-center gap-2">
-            {(game.turn === "you" ? game.you : game.cpu).map((t) => (
-              <button key={t.id} type="button" onClick={() => pickToken(t.id)} className="rounded-xl bg-violet px-4 py-2 text-sm font-bold">
-                Move {t.id + 1}
-              </button>
-            ))}
+        {game.winner && (
+          <div className="mt-6 flex justify-center">
+            <button type="button" onClick={() => start("cpu")} className="rounded-2xl bg-lemon px-8 py-3 font-extrabold text-ink">
+              Play again
+            </button>
           </div>
         )}
-
-        <div className="mt-8 flex justify-center">
-          {game.winner ? (
-            <button type="button" onClick={() => start("cpu")} className="rounded-2xl bg-lemon px-8 py-3 font-extrabold text-ink">
-              Rematch
-            </button>
-          ) : (
-            <DiceRoll rolling={rolling} value={dice} onRoll={() => doRoll(false)} disabled={!canRoll} />
-          )}
-        </div>
       </div>
     </main>
-  );
-}
-
-function BoardTokens({ game, x, y }: { game: LudoState; x: number; y: number }) {
-  const all = [
-    ...game.you.map((t) => ({ ...t, color: "#8066ED" })),
-    ...game.cpu.map((t) => ({ ...t, color: "#18C6D4" })),
-  ];
-  return (
-    <>
-      {all.map((t, idx) => {
-        const pos = trackPosition(t.steps);
-        if (!pos || pos.x !== x || pos.y !== y) return null;
-        return <span key={idx} className="absolute inset-1 m-auto h-4 w-4 rounded-full border-2 border-white" style={{ background: t.color }} />;
-      })}
-    </>
-  );
-}
-
-function YardTokens({
-  game,
-  side,
-  className,
-  color,
-}: {
-  game: LudoState;
-  side: "you" | "cpu";
-  className: string;
-  color: string;
-}) {
-  const tokens = (side === "you" ? game.you : game.cpu).filter((t) => t.steps === -1);
-  if (!tokens.length) return null;
-  return (
-    <div className={`absolute ${className} flex gap-1`}>
-      {tokens.map((t) => (
-        <span key={t.id} className="h-5 w-5 rounded-full border-2 border-white" style={{ background: color }} />
-      ))}
-    </div>
   );
 }

@@ -12,8 +12,8 @@ export type BoardGame = {
 export const boardGames: BoardGame[] = [
   {
     id: "ludo",
-    title: "Ludo Rush",
-    subtitle: "Race tokens home. Vs CPU, pass & play, or online room.",
+    title: "Ludo King",
+    subtitle: "Classic cross board — 4 tokens, captures, home stretch.",
     icon: "🎲",
     tag: "Classic",
     players: "You vs CPU",
