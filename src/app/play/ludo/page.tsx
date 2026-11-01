@@ -13,7 +13,7 @@ import {
   applyLudoMove,
   cpuPickToken,
   createLudo,
-  displayName,
+  turnPhrase,
   isBotTurn,
   isHumanTurn,
   ludoRoll,
@@ -179,7 +179,7 @@ function LudoPageInner() {
         </div>
         <h1 className="display mt-3 text-center text-2xl font-bold">Campus Ludo King</h1>
         <p className="mt-1 text-center text-xs text-white/45">
-          {game.playerCount === 4 ? "4-player table" : "2-player"} · {displayName(game, game.turn)}&apos;s turn
+          {game.playerCount === 4 ? "4-player table" : "2-player"} · {turnPhrase(game, game.turn)}
         </p>
         <p className="mt-2 text-center text-sm text-violet-100">{game.message}</p>
 

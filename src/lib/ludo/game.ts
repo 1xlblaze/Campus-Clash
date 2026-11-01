@@ -77,6 +77,11 @@ export function displayName(state: LudoState, color: LudoColor) {
   return `CPU ${PLAYER_META[color].label}`;
 }
 
+export function turnPhrase(state: LudoState, color: LudoColor) {
+  if (color === "red" && state.humanColors.includes("red") && state.setup !== "local4") return "Your turn";
+  return `${displayName(state, color)}'s turn`;
+}
+
 function allFinished(tokens: LudoToken[]) {
   return tokens.every((t) => t.distance >= FINISH);
 }

@@ -16,7 +16,7 @@ export const boardGames: BoardGame[] = [
     subtitle: "4P table, sound, WhatsApp rooms — Ludo King rules.",
     icon: "🎲",
     tag: "Classic",
-    players: "You vs CPU",
+    players: "2–4 players · online rooms",
     href: "/play/ludo",
     gradient: "from-rose-500/25 to-orange-500/10",
   },
