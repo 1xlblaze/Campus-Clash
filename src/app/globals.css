@@ -3,3 +3,4 @@
 @tailwind components;
 @tailwind utilities;
 :root{color-scheme:dark}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#0D1020;color:#F7F7FC;font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif}button{font:inherit}.display{font-family:'Space Grotesk','DM Sans',sans-serif;letter-spacing:-.04em}.glow-bg{background:radial-gradient(ellipse at 10% 0%,rgba(128,102,237,.23),transparent 42%),radial-gradient(ellipse at 100% 35%,rgba(24,198,212,.10),transparent 35%),#0D1020}.game-card{background:linear-gradient(145deg,rgba(35,39,66,.96),rgba(23,27,48,.96));border:1px solid rgba(255,255,255,.08)}
+.board-felt{background:radial-gradient(circle at 50% 0%,rgba(34,80,50,.35),transparent 55%),#0a1628}
