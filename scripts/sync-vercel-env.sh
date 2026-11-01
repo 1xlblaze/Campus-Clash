@@ -16,15 +16,17 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 if ! command -v vercel >/dev/null 2>&1; then
-  npm install -g vercel@latest
+  VERCEL_CMD="npx vercel"
+else
+  VERCEL_CMD="vercel"
 fi
 
 add_var() {
   local name="$1"
   local value="$2"
   local target="$3"
-  printf '%s' "$value" | vercel env add "$name" "$target" --force --yes 2>/dev/null || \
-    printf '%s' "$value" | vercel env add "$name" "$target" --yes
+  printf '%s' "$value" | $VERCEL_CMD env add "$name" "$target" --force --yes 2>/dev/null || \
+    printf '%s' "$value" | $VERCEL_CMD env add "$name" "$target" --yes
 }
 
 for target in production preview development; do

@@ -2,6 +2,18 @@
 
 Vercel MCP was not used in the agent environment. Use **Git import** or the **CLI / GitHub Actions** flow below.
 
+## Production (Vercel)
+
+- **URL:** https://campus-clash-five.vercel.app  
+- **Project:** `campus-clash` (`prj_9Mcy2UmzRUCdRCygbO3fGa81X5RE`)
+
+If the site shows a Vercel login wall, open the project → **Settings → Deployment Protection** and disable protection for production (or add your team as viewers).
+
+Supabase **Authentication → URL configuration**:
+
+- Site URL: `https://campus-clash-five.vercel.app`
+- Redirect URLs: `https://campus-clash-five.vercel.app/auth/callback`
+
 ## 1. Import from GitHub (fastest)
 
 1. Open [vercel.com/new](https://vercel.com/new) and import **`1xlblaze/Campus-Clash`**.
