@@ -135,3 +135,7 @@ export function trackPosition(steps: number): { x: number; y: number } | null {
 }
 
 export { TRACK };
+
+export function ludoTurnSeat(turn: "you" | "cpu"): "p1" | "p2" {
+  return turn === "you" ? "p1" : "p2";
+}

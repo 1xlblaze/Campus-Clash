@@ -13,7 +13,7 @@ export const boardGames: BoardGame[] = [
   {
     id: "ludo",
     title: "Ludo Rush",
-    subtitle: "Race your tokens home. Cut rivals. Own the board.",
+    subtitle: "Race tokens home. Vs CPU, pass & play, or online room.",
     icon: "🎲",
     tag: "Classic",
     players: "You vs CPU",
@@ -23,7 +23,7 @@ export const boardGames: BoardGame[] = [
   {
     id: "snakes",
     title: "Snakes & Ladders",
-    subtitle: "Climb the ladders. Dodge the snakes. First to 100 wins.",
+    subtitle: "Classic 100-cell board. Solo, same-screen duo, or online.",
     icon: "🪜",
     tag: "Party fav",
     players: "2 players",
@@ -33,7 +33,7 @@ export const boardGames: BoardGame[] = [
   {
     id: "monopoly",
     title: "Campus Monopoly",
-    subtitle: "Buy blocks, charge rent, bankrupt the rival dean.",
+    subtitle: "20-space loop, chance cards, GO salary. CPU, local, or online.",
     icon: "🏛️",
     tag: "Business",
     players: "You vs CPU",

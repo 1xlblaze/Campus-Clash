@@ -37,14 +37,18 @@ export function applySnakesLadders(pos: number): { next: number; kind?: "ladder"
 
 export type SnakesPlayer = { id: "you" | "rival"; name: string; pos: number; color: string };
 
-export function createSnakesGame(): { players: SnakesPlayer[]; turn: 0 | 1; winner: null | "you" | "rival" } {
+export function snakesTurnSeat(turn: 0 | 1): "p1" | "p2" {
+  return turn === 0 ? "p1" : "p2";
+}
+
+export function createSnakesGame(mode: "cpu" | "local" | "online" = "cpu") {
   return {
     players: [
-      { id: "you", name: "You", pos: 0, color: "#8066ED" },
-      { id: "rival", name: "Rival", pos: 0, color: "#18C6D4" },
+      { id: "you" as const, name: mode === "local" ? "Player 1" : "You", pos: 0, color: "#8066ED" },
+      { id: "rival" as const, name: mode === "local" ? "Player 2" : mode === "cpu" ? "CPU" : "Guest", pos: 0, color: "#18C6D4" },
     ],
-    turn: 0,
-    winner: null,
+    turn: 0 as 0 | 1,
+    winner: null as null | "you" | "rival",
   };
 }
 

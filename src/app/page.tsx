@@ -132,9 +132,9 @@ export default function HomePage() {
           </div>
           <div className="mt-9 grid gap-4 md:grid-cols-3">
             {[
-              { e: "🎲", t: "Choose a game", d: "Ludo, Snakes & Ladders, or Campus Monopoly — all tuned for mobile." },
-              { e: "⚔️", t: "Beat the CPU", d: "Smart-enough rivals so solo sessions still feel alive." },
-              { e: "🔁", t: "Instant rematch", d: "One tap to run it back. Bring a friend on the same screen later." },
+              { e: "🎲", t: "Pick a mode", d: "Vs CPU, pass & play on one phone, or host an online room with a code." },
+              { e: "⚔️", t: "Play the board", d: "Ludo, Snakes & Ladders, or full-loop Campus Monopoly with chance cards." },
+              { e: "🔁", t: "Run it back", d: "Instant rematch locally, or sync live moves through Supabase Realtime." },
             ].map((x) => (
               <div key={x.t} className="rounded-3xl border border-white/10 bg-panel/70 p-6">
                 <span className="text-3xl">{x.e}</span>

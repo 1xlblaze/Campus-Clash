@@ -2,7 +2,7 @@
 
 **Play anywhere. Challenge everyone. Represent your campus.**
 
-A mobile-first casual gaming MVP: guest-first play, Bollywood Emoji Guess, Rapid-Fire Trivia, results, friend challenges, and optional campus membership.
+A mobile-first **board game** hub: **Ludo**, **Snakes & Ladders**, and **Campus Monopoly** — play vs CPU instantly, no signup wall.
 
 ## Stack
 - Next.js App Router + TypeScript
