@@ -53,8 +53,8 @@ export function ludoRoll(state: LudoState, roll: number): LudoState {
 
   if (movable.length === 0) {
     message += roll === 6 ? " No move — roll again." : " No legal move.";
-    if (roll === 6 && side === "you") {
-      return { ...state, lastRoll: roll, message, mustRoll: true, turn: "you" };
+    if (roll === 6) {
+      return { ...state, lastRoll: roll, message, mustRoll: true, turn: side };
     }
     return {
       ...state,
@@ -65,7 +65,7 @@ export function ludoRoll(state: LudoState, roll: number): LudoState {
     };
   }
 
-  if (side === "you" && movable.length > 1) {
+  if (movable.length > 1 && side === "you") {
     return {
       ...state,
       lastRoll: roll,
@@ -75,8 +75,8 @@ export function ludoRoll(state: LudoState, roll: number): LudoState {
     };
   }
 
-  const token = movable[0];
-  return applyLudoMove(state, token.id, roll);
+  const pick = side === "cpu" && movable.length > 1 ? cpuPickToken(state, roll) : movable[0].id;
+  return applyLudoMove(state, pick, roll);
 }
 
 export function applyLudoMove(state: LudoState, tokenId: number, roll: number): LudoState {

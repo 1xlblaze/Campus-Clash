@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowLeft, Settings2 } from "lucide-react";
 import { DiceRoll } from "@/components/board/DiceRoll";
 import { PlayModeGate } from "@/components/board/PlayModeGate";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
@@ -20,19 +20,26 @@ import {
 } from "@/lib/monopoly/game";
 
 export default function MonopolyPage() {
-  const [screen, setScreen] = useState<"gate" | "play">("gate");
+  const [screen, setScreen] = useState<"gate" | "play">("play");
   const [mode, setMode] = useState<PlayMode>("cpu");
   const [onlineMeta, setOnlineMeta] = useState<{ roomCode: string; role: "host" | "guest" } | null>(null);
   const [game, setGame] = useState<MonopolyState>(createMonopoly);
   const [rolling, setRolling] = useState(false);
   const [dice, setDice] = useState(2);
   const [roomBanner, setRoomBanner] = useState<string | null>(null);
+  const modeRef = useRef(mode);
+  const onlineMetaRef = useRef(onlineMeta);
 
   const online = useOnlineRoom(onlineMeta?.roomCode ?? null, onlineMeta?.role ?? null);
   const mySeat = onlineMeta?.role === "guest" ? "p2" : onlineMeta?.role === "host" ? "p1" : null;
 
   useEffect(() => {
-    if (mode === "online" && online?.remoteState) setGame(online.remoteState as MonopolyState);
+    modeRef.current = mode;
+    onlineMetaRef.current = onlineMeta;
+  }, [mode, onlineMeta]);
+
+  useEffect(() => {
+    if (mode === "online" && online?.remoteState != null) setGame(online.remoteState as MonopolyState);
   }, [mode, online?.remoteState]);
 
   const start = (m: PlayMode, o?: { roomCode: string; role: "host" | "guest" }) => {
@@ -77,40 +84,58 @@ export default function MonopolyPage() {
         ((onlineMeta?.role === "host" && game.turn === "you") ||
           (onlineMeta?.role === "guest" && game.turn === "cpu"))));
 
-  const syncOnline = (next: MonopolyState) => {
-    if (mode === "online" && onlineMeta) {
-      void online?.publish(next, sideToSeat(next.turn), next.winner ? "finished" : "playing");
-    }
-  };
+  const syncOnline = useCallback(
+    (next: MonopolyState) => {
+      if (modeRef.current === "online" && onlineMetaRef.current) {
+        void online?.publish(next, sideToSeat(next.turn), next.winner ? "finished" : "playing");
+      }
+    },
+    [online]
+  );
 
-  const roll = useCallback(() => {
-    if (!canRoll) return;
-    setRolling(true);
-    const a = 1 + Math.floor(Math.random() * 6);
-    const b = 1 + Math.floor(Math.random() * 6);
-    const total = a + b;
-    window.setTimeout(() => {
-      setDice(total);
-      setGame((g) => {
-        const next = rollMove(g, total);
-        syncOnline(next);
-        return next;
-      });
-      setRolling(false);
-    }, 700);
-  }, [canRoll, rolling, mode, online, onlineMeta]);
+  const roll = useCallback(
+    (forCpu = false) => {
+      if (rolling || game.winner || game.pendingBuy !== null) return;
+      if (forCpu) {
+        if (modeRef.current !== "cpu" || game.turn !== "cpu") return;
+      } else if (!canRoll) return;
+
+      setRolling(true);
+      const a = 1 + Math.floor(Math.random() * 6);
+      const b = 1 + Math.floor(Math.random() * 6);
+      const total = a + b;
+      window.setTimeout(() => {
+        setDice(total);
+        setGame((g) => {
+          const next = rollMove(g, total);
+          syncOnline(next);
+          return next;
+        });
+        setRolling(false);
+      }, 700);
+    },
+    [canRoll, game.pendingBuy, game.turn, game.winner, rolling, syncOnline]
+  );
 
   useEffect(() => {
     if (mode !== "cpu" || game.winner || game.turn !== "cpu" || game.pendingBuy !== null || rolling) return;
-    const t = window.setTimeout(() => roll(), 1000);
+    const t = window.setTimeout(() => roll(true), 1000);
     return () => window.clearTimeout(t);
   }, [mode, game.turn, game.pendingBuy, game.winner, rolling, roll]);
 
   useEffect(() => {
     if (mode !== "cpu" || game.turn !== "cpu" || game.pendingBuy === null) return;
-    const t = window.setTimeout(() => setGame((g) => buyProperty(g, cpuShouldBuy(g))), 600);
+    const t = window.setTimeout(
+      () =>
+        setGame((g) => {
+          const next = buyProperty(g, cpuShouldBuy(g));
+          syncOnline(next);
+          return next;
+        }),
+      600
+    );
     return () => window.clearTimeout(t);
-  }, [mode, game.turn, game.pendingBuy]);
+  }, [mode, game.turn, game.pendingBuy, syncOnline]);
 
   if (screen === "gate") {
     return (
@@ -127,11 +152,20 @@ export default function MonopolyPage() {
   return (
     <main className="min-h-screen board-felt glow-bg px-4 py-6">
       <div className="mx-auto max-w-3xl">
-        <Link href="/play" className="text-sm text-white/50">
-          <ArrowLeft className="mr-1 inline h-4 w-4" />
-          Lobby
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/play" className="text-sm text-white/50">
+            <ArrowLeft className="mr-1 inline h-4 w-4" />
+            Lobby
+          </Link>
+          <button type="button" onClick={() => setScreen("gate")} className="text-sm text-white/50">
+            <Settings2 className="mr-1 inline h-4 w-4" />
+            Modes
+          </button>
+        </div>
         <h1 className="display mt-4 text-3xl font-bold">Campus Monopoly</h1>
+        <p className="mt-1 text-xs text-white/40">
+          {mode === "cpu" ? "Vs CPU — rival rolls automatically" : mode === "local" ? "Pass & play" : "Online"}
+        </p>
         {roomBanner && <p className="mt-1 font-mono text-xs text-cyan">{roomBanner}</p>}
         <p className="mt-2 text-sm text-white/55">{game.message}</p>
 
@@ -205,7 +239,7 @@ export default function MonopolyPage() {
 
         <div className="mt-8 flex flex-col items-center gap-2">
           {game.winner ? (
-            <button type="button" onClick={() => setScreen("gate")} className="rounded-2xl bg-lemon px-8 py-3 font-extrabold text-ink">
+            <button type="button" onClick={() => start("cpu")} className="rounded-2xl bg-lemon px-8 py-3 font-extrabold text-ink">
               New deal
             </button>
           ) : (
@@ -213,10 +247,10 @@ export default function MonopolyPage() {
               <p className="text-xs text-white/40">Two dice · Pass GO +₹200 · 🃏 Campus Cards</p>
               <DiceRoll
                 rolling={rolling}
-                value={Math.min(12, dice)}
-                onRoll={roll}
+                value={dice}
+                onRoll={() => roll(false)}
                 disabled={!canRoll}
-                label="Roll & move"
+                label={`Roll & move (${dice > 6 ? dice : "2–12"})`}
               />
             </>
           )}

@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowLeft, Settings2 } from "lucide-react";
 import { DiceRoll } from "@/components/board/DiceRoll";
 import { PlayModeGate } from "@/components/board/PlayModeGate";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
-import type { PlayMode } from "@/lib/multiplayer/types";
 import { getOrCreateGuestToken } from "@/lib/guest-session";
+import type { PlayMode } from "@/lib/multiplayer/types";
 import {
   cellPosition,
   createSnakesGame,
@@ -21,18 +21,25 @@ import {
 type SnakesState = ReturnType<typeof createSnakesGame>;
 
 export default function SnakesPage() {
-  const [screen, setScreen] = useState<"gate" | "play">("gate");
+  const [screen, setScreen] = useState<"gate" | "play">("play");
   const [mode, setMode] = useState<PlayMode>("cpu");
   const [onlineMeta, setOnlineMeta] = useState<{ roomCode: string; role: "host" | "guest" } | null>(null);
   const [game, setGame] = useState<SnakesState>(() => createSnakesGame("cpu"));
   const [rolling, setRolling] = useState(false);
   const [dice, setDice] = useState(1);
   const [roomBanner, setRoomBanner] = useState<string | null>(null);
+  const modeRef = useRef(mode);
+  const onlineMetaRef = useRef(onlineMeta);
 
   const online = useOnlineRoom(onlineMeta?.roomCode ?? null, onlineMeta?.role ?? null);
 
   useEffect(() => {
-    if (mode !== "online" || !online?.remoteState) return;
+    modeRef.current = mode;
+    onlineMetaRef.current = onlineMeta;
+  }, [mode, onlineMeta]);
+
+  useEffect(() => {
+    if (mode !== "online" || online?.remoteState == null) return;
     setGame(online.remoteState as SnakesState);
   }, [mode, online?.remoteState]);
 
@@ -62,17 +69,23 @@ export default function SnakesPage() {
     !rolling &&
     (mode === "local" ||
       (mode === "cpu" && game.turn === 0) ||
-      (mode === "online" && online?.isMyTurn));
+      (mode === "online" && Boolean(online?.isMyTurn)));
 
-  const roll = useCallback(() => {
-    if (!canRoll) return;
+  const runRoll = useCallback((forCpu: boolean) => {
+    if (game.winner || rolling) return;
+    if (forCpu) {
+      if (modeRef.current !== "cpu" || game.turn !== 1) return;
+    } else if (!canRoll) {
+      return;
+    }
+
     setRolling(true);
     const value = 1 + Math.floor(Math.random() * 6);
     window.setTimeout(() => {
       setDice(value);
       setGame((g) => {
         const next = moveSnakes(g, value);
-        if (mode === "online" && onlineMeta) {
+        if (modeRef.current === "online" && onlineMetaRef.current) {
           const seat = snakesTurnSeat(next.turn);
           void online?.publish(next, seat, next.winner ? "finished" : "playing");
         }
@@ -80,13 +93,13 @@ export default function SnakesPage() {
       });
       setRolling(false);
     }, 650);
-  }, [canRoll, mode, online, onlineMeta]);
+  }, [canRoll, game.turn, game.winner, online, rolling]);
 
   useEffect(() => {
     if (mode !== "cpu" || game.winner || game.turn !== 1 || rolling) return;
-    const t = window.setTimeout(() => roll(), 900);
+    const t = window.setTimeout(() => runRoll(true), 900);
     return () => window.clearTimeout(t);
-  }, [mode, game.turn, game.winner, rolling, roll]);
+  }, [mode, game.turn, game.winner, rolling, runRoll]);
 
   if (screen === "gate") {
     return (
@@ -103,16 +116,23 @@ export default function SnakesPage() {
   return (
     <main className="min-h-screen board-felt glow-bg px-4 py-6">
       <div className="mx-auto max-w-lg">
-        <Link href="/play" className="text-sm text-white/50">
-          <ArrowLeft className="mr-1 inline h-4 w-4" />
-          Lobby
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/play" className="text-sm text-white/50">
+            <ArrowLeft className="mr-1 inline h-4 w-4" />
+            Lobby
+          </Link>
+          <button type="button" onClick={() => setScreen("gate")} className="text-sm text-white/50">
+            <Settings2 className="mr-1 inline h-4 w-4" />
+            Modes
+          </button>
+        </div>
         <h1 className="display mt-4 text-3xl font-bold">Snakes & Ladders</h1>
-        {roomBanner && <p className="mt-1 text-xs font-mono text-cyan">{roomBanner}</p>}
-        <p className="mt-1 text-sm text-white/50">
+        <p className="mt-1 text-xs text-white/40">
+          {mode === "cpu" ? "Vs CPU" : mode === "local" ? "Pass & play" : "Online"} ·{" "}
           {game.players[game.turn].name}&apos;s turn
           {mode === "online" && !online?.isMyTurn ? " (waiting…)" : ""}
         </p>
+        {roomBanner && <p className="mt-1 text-xs font-mono text-cyan">{roomBanner}</p>}
 
         <div className="mt-4 rounded-2xl border border-white/10 bg-panel/80 px-4 py-3 text-center text-sm font-semibold text-violet-100">
           {game.winner ? `🎉 ${game.players.find((p) => p.id === game.winner)?.name} wins!` : `Dice: ${dice}`}
@@ -153,9 +173,9 @@ export default function SnakesPage() {
             ))}
           </div>
           {!game.winner ? (
-            <DiceRoll rolling={rolling} value={dice} onRoll={roll} disabled={!canRoll} />
+            <DiceRoll rolling={rolling} value={dice} onRoll={() => runRoll(false)} disabled={!canRoll} />
           ) : (
-            <button type="button" onClick={() => setScreen("gate")} className="rounded-2xl bg-violet px-5 py-3 font-bold">
+            <button type="button" onClick={() => start("cpu")} className="rounded-2xl bg-violet px-5 py-3 font-bold">
               Play again
             </button>
           )}

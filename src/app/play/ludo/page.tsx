@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowLeft, Settings2 } from "lucide-react";
 import { DiceRoll } from "@/components/board/DiceRoll";
 import { PlayModeGate } from "@/components/board/PlayModeGate";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
@@ -19,18 +19,25 @@ import {
 } from "@/lib/ludo/game";
 
 export default function LudoPage() {
-  const [screen, setScreen] = useState<"gate" | "play">("gate");
+  const [screen, setScreen] = useState<"gate" | "play">("play");
   const [mode, setMode] = useState<PlayMode>("cpu");
   const [onlineMeta, setOnlineMeta] = useState<{ roomCode: string; role: "host" | "guest" } | null>(null);
   const [game, setGame] = useState<LudoState>(createLudo);
   const [rolling, setRolling] = useState(false);
   const [dice, setDice] = useState(1);
   const [roomBanner, setRoomBanner] = useState<string | null>(null);
+  const modeRef = useRef(mode);
+  const onlineMetaRef = useRef(onlineMeta);
 
   const online = useOnlineRoom(onlineMeta?.roomCode ?? null, onlineMeta?.role ?? null);
 
   useEffect(() => {
-    if (mode === "online" && online?.remoteState) setGame(online.remoteState as LudoState);
+    modeRef.current = mode;
+    onlineMetaRef.current = onlineMeta;
+  }, [mode, onlineMeta]);
+
+  useEffect(() => {
+    if (mode === "online" && online?.remoteState != null) setGame(online.remoteState as LudoState);
   }, [mode, online?.remoteState]);
 
   const start = (m: PlayMode, o?: { roomCode: string; role: "host" | "guest" }) => {
@@ -60,59 +67,60 @@ export default function LudoPage() {
     game.mustRoll &&
     (mode === "local" ||
       (mode === "cpu" && game.turn === "you") ||
-      (mode === "online" && Boolean(online?.isMyTurn)));
+      (mode === "online" &&
+        Boolean(online?.isMyTurn) &&
+        ((onlineMeta?.role === "host" && game.turn === "you") ||
+          (onlineMeta?.role === "guest" && game.turn === "cpu"))));
 
   const canPick =
     !game.mustRoll &&
     !game.winner &&
     (mode === "local" ||
       (mode === "cpu" && game.turn === "you") ||
-      (mode === "online" && Boolean(online?.isMyTurn)));
+      (mode === "online" &&
+        Boolean(online?.isMyTurn) &&
+        ((onlineMeta?.role === "host" && game.turn === "you") ||
+          (onlineMeta?.role === "guest" && game.turn === "cpu"))));
 
-  const syncOnline = (next: LudoState) => {
-    if (mode === "online" && onlineMeta) {
-      void online?.publish(next, ludoTurnSeat(next.turn), next.winner ? "finished" : "playing");
-    }
-  };
+  const syncOnline = useCallback(
+    (next: LudoState) => {
+      if (modeRef.current === "online" && onlineMetaRef.current) {
+        void online?.publish(next, ludoTurnSeat(next.turn), next.winner ? "finished" : "playing");
+      }
+    },
+    [online]
+  );
 
-  const doRoll = useCallback(() => {
-    if (!canRoll) return;
-    setRolling(true);
-    const value = 1 + Math.floor(Math.random() * 6);
-    window.setTimeout(() => {
-      setDice(value);
-      setGame((g) => {
-        let next = ludoRoll(g, value);
-        if (mode === "cpu" && next.turn === "cpu" && !next.mustRoll && !next.winner) {
-          const tid = cpuPickToken(next, value);
-          next = applyLudoMove(next, tid, value);
-        }
-        syncOnline(next);
-        return next;
-      });
-      setRolling(false);
-    }, 650);
-  }, [canRoll, mode, online, onlineMeta]);
+  const doRoll = useCallback(
+    (forCpu = false) => {
+      if (rolling || game.winner) return;
+      if (forCpu) {
+        if (modeRef.current !== "cpu" || game.turn !== "cpu" || !game.mustRoll) return;
+      } else if (!canRoll) return;
 
-  useEffect(() => {
-    if (mode !== "cpu" || game.winner || game.turn !== "cpu" || !game.mustRoll || rolling) return;
-    const t = window.setTimeout(() => {
       setRolling(true);
       const value = 1 + Math.floor(Math.random() * 6);
       window.setTimeout(() => {
         setDice(value);
         setGame((g) => {
           let next = ludoRoll(g, value);
-          if (!next.mustRoll && next.turn === "cpu" && !next.winner) {
+          if (modeRef.current === "cpu" && next.turn === "cpu" && !next.mustRoll && !next.winner) {
             next = applyLudoMove(next, cpuPickToken(next, value), value);
           }
+          syncOnline(next);
           return next;
         });
         setRolling(false);
       }, 650);
-    }, 800);
+    },
+    [canRoll, game.mustRoll, game.turn, game.winner, rolling, syncOnline]
+  );
+
+  useEffect(() => {
+    if (mode !== "cpu" || game.winner || game.turn !== "cpu" || !game.mustRoll || rolling) return;
+    const t = window.setTimeout(() => doRoll(true), 800);
     return () => window.clearTimeout(t);
-  }, [mode, game, rolling]);
+  }, [mode, game.turn, game.mustRoll, game.winner, rolling, doRoll]);
 
   const pickToken = (id: number) => {
     if (!canPick) return;
@@ -141,11 +149,20 @@ export default function LudoPage() {
   return (
     <main className="min-h-screen board-felt glow-bg px-4 py-6">
       <div className="mx-auto max-w-md">
-        <Link href="/play" className="text-sm text-white/50">
-          <ArrowLeft className="mr-1 inline h-4 w-4" />
-          Lobby
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/play" className="text-sm text-white/50">
+            <ArrowLeft className="mr-1 inline h-4 w-4" />
+            Lobby
+          </Link>
+          <button type="button" onClick={() => setScreen("gate")} className="text-sm text-white/50">
+            <Settings2 className="mr-1 inline h-4 w-4" />
+            Modes
+          </button>
+        </div>
         <h1 className="display mt-4 text-3xl font-bold">Ludo Rush</h1>
+        <p className="mt-1 text-xs text-white/40">
+          {mode === "cpu" ? "Vs CPU" : mode === "local" ? "Pass & play" : "Online"}
+        </p>
         {roomBanner && <p className="mt-1 font-mono text-xs text-cyan">{roomBanner}</p>}
         <p className="mt-2 text-sm text-white/55">
           {game.turn === "you" ? p1Label : p2Label}&apos;s turn · {game.message}
@@ -180,11 +197,11 @@ export default function LudoPage() {
 
         <div className="mt-8 flex justify-center">
           {game.winner ? (
-            <button type="button" onClick={() => setScreen("gate")} className="rounded-2xl bg-lemon px-8 py-3 font-extrabold text-ink">
+            <button type="button" onClick={() => start("cpu")} className="rounded-2xl bg-lemon px-8 py-3 font-extrabold text-ink">
               Rematch
             </button>
           ) : (
-            <DiceRoll rolling={rolling} value={dice} onRoll={doRoll} disabled={!canRoll} />
+            <DiceRoll rolling={rolling} value={dice} onRoll={() => doRoll(false)} disabled={!canRoll} />
           )}
         </div>
       </div>

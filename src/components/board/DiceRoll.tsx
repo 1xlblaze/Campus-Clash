@@ -17,7 +17,7 @@ export function DiceRoll({ rolling, value, onRoll, disabled, label = "Roll dice"
 
   useEffect(() => {
     if (!rolling) {
-      setDisplay(Math.min(6, Math.max(1, value)));
+      setDisplay(value > 6 ? Math.min(12, value) : Math.min(6, Math.max(1, value)));
       return;
     }
     const tick = window.setInterval(() => setDisplay(1 + Math.floor(Math.random() * 6)), 80);
@@ -29,7 +29,11 @@ export function DiceRoll({ rolling, value, onRoll, disabled, label = "Roll dice"
       <div
         className={`grid h-20 w-20 place-items-center rounded-2xl border-2 border-white/20 bg-gradient-to-br from-white to-zinc-200 text-5xl shadow-lg transition ${rolling ? "animate-pulse scale-105" : ""}`}
       >
-        {FACES[display - 1]}
+        {value > 6 ? (
+          <span className="text-3xl font-black text-ink">{Math.min(12, value)}</span>
+        ) : (
+          FACES[display - 1]
+        )}
       </div>
       <button
         type="button"
