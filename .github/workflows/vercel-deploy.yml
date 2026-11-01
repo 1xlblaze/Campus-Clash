@@ -16,10 +16,6 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-<<<<<<< HEAD
-    if: ${{ secrets.VERCEL_TOKEN != '' }}
-=======
->>>>>>> 6a054eb (Add GitHub Actions Vercel deploy workflow (requires PAT workflow scope to push to GitHub))
     steps:
       - uses: actions/checkout@v4
 
