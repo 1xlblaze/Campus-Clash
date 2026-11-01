@@ -26,6 +26,7 @@ Run the migration files in order:
 
 1. `supabase/migrations/20260301120000_campus_clash.sql`
 2. `supabase/migrations/20260301130000_campus_clash_rpc.sql`
+3. `supabase/migrations/20260301140000_campus_clash_auth.sql`
 
 `supabase/schema.sql` is a human-readable snapshot of the foundation tables (see migration for full RLS + seed).
 
@@ -49,6 +50,15 @@ Gameplay uses Next.js API routes that call Supabase RPCs with the **anon** key o
 | `POST /api/sessions/:id/complete` | Compute score server-side, mark session verified |
 | `GET /api/leaderboard?game=bollywood` | Top verified scores |
 | `POST /api/challenges` | Create friend challenge token after verified round |
+
+| `POST /api/auth/link-guest` | After sign-in, attach guest rounds on this device to the user |
+
+## Auth flow
+
+- `/account` — email/password sign up and sign in (optional; guest play still works).
+- `/auth/callback` — OAuth/email confirmation callback.
+- Middleware refreshes the Supabase session on account and gameplay API routes.
+- `cc_link_guest_sessions` RPC links prior guest `game_sessions` (same browser guest token) to `auth.users`.
 
 Guest ownership is enforced with a random token stored in `sessionStorage` and hashed in Postgres.
 

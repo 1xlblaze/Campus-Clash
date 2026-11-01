@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseRouteClient } from "@/lib/supabase/server";
 
 type Params = { params: Promise<{ sessionId: string }> };
 
@@ -22,7 +22,7 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Verified mode unavailable" }, { status: 503 });
   }
 
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseRouteClient();
   const { data, error } = await supabase.rpc("cc_complete_session", {
     p_session_id: sessionId,
     p_guest_token: body.guestToken,

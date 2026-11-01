@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseRouteClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Verified challenges require Supabase" }, { status: 503 });
   }
 
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseRouteClient();
   const { data, error } = await supabase.rpc("cc_create_challenge", {
     p_session_id: body.sessionId,
     p_guest_token: body.guestToken,

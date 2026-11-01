@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseRouteClient } from "@/lib/supabase/server";
 import { getGame } from "@/lib/games";
 
 export async function POST(request: Request) {
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     });
   }
 
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseRouteClient();
   const { data, error } = await supabase.rpc("cc_start_session", {
     p_game_id: gameId,
     p_guest_token: guestToken,

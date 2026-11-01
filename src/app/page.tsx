@@ -11,8 +11,8 @@ export default function HomePage() {
   return <main className="min-h-screen glow-bg"><div className="mx-auto max-w-6xl px-5 pb-16">
     <header className="flex items-center justify-between py-5">
       <Link href="/" className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-violet shadow-glow text-xl">⚔️</span><span className="display text-xl font-bold">campus<span className="text-violet-300">clash</span></span></Link>
-      <nav className="hidden items-center gap-7 text-sm text-white/60 md:flex"><a href="#games" className="hover:text-white">Play games</a><a href="#how" className="hover:text-white">How it works</a><a href="#campus" className="hover:text-white">Campus</a></nav>
-      <Link href="/play" className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10">Quick play <ArrowUpRight className="ml-1 inline h-4 w-4"/></Link>
+      <nav className="hidden items-center gap-7 text-sm text-white/60 md:flex"><a href="#games" className="hover:text-white">Play games</a><a href="#how" className="hover:text-white">How it works</a><a href="#campus" className="hover:text-white">Campus</a><Link href="/account" className="hover:text-white">Account</Link></nav>
+      <div className="flex items-center gap-2"><Link href="/account" className="hidden rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 sm:inline">Account</Link><Link href="/play" className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10">Quick play <ArrowUpRight className="ml-1 inline h-4 w-4"/></Link></div>
     </header>
     <section className="grid items-center gap-10 py-14 md:grid-cols-[1.1fr_.9fr] md:py-24">
       <div><div className="mb-6 inline-flex items-center gap-2 rounded-full border border-violet-300/20 bg-violet-400/10 px-3 py-1.5 text-xs font-semibold text-violet-200"><Sparkles className="h-3.5 w-3.5"/> YOUR NEW FAVOURITE BREAK</div>
