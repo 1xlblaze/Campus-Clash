@@ -21,6 +21,9 @@ export default function HomePage() {
             <a href="#how" className="hover:text-white">
               How it works
             </a>
+            <a href="#grow" className="hover:text-white">
+              Grow
+            </a>
             <Link href="/account" className="hover:text-white">
               Account
             </Link>
@@ -46,15 +49,15 @@ export default function HomePage() {
               </span>
             </h1>
             <p className="mt-6 max-w-lg text-base leading-7 text-white/60 sm:text-lg">
-              Real classics — not another quiz app. Roll dice, buy property, climb ladders, and talk smack with
-              friends. No signup wall.
+              Real classics — not another quiz app. Full <strong className="font-semibold text-white/80">4-player Ludo King</strong>{" "}
+              table, Monopoly, Snakes — share a link, no app store.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/play/ludo"
                 className="rounded-2xl bg-violet px-6 py-3.5 font-bold shadow-glow transition hover:-translate-y-0.5 hover:bg-violet-500"
               >
-                Start with Ludo <ArrowRight className="ml-2 inline h-4 w-4" />
+                Ludo King (4P) <ArrowRight className="ml-2 inline h-4 w-4" />
               </Link>
               <Link
                 href="/play"
@@ -122,6 +125,26 @@ export default function HomePage() {
                 </span>
               </Link>
             ))}
+          </div>
+        </section>
+
+        <section id="grow" className="scroll-mt-8 py-14">
+          <div className="rounded-[2rem] border border-lemon/20 bg-gradient-to-br from-violet/20 to-cyan/10 p-8 md:p-10">
+            <p className="text-xs font-bold uppercase tracking-[.2em] text-lemon">BEAT THE NOISE</p>
+            <h2 className="display mt-3 text-3xl font-bold sm:text-4xl">Ludo King owns the app store. You own the group chat.</h2>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/55">
+              No 200MB download — host a room, tap <strong className="text-white/75">WhatsApp</strong>, play with your batch.
+              Pass & play four on one phone. Campus Monopoly on the same site so people stay, not bounce to a rival app.
+            </p>
+            <ul className="mt-6 grid gap-2 text-sm text-white/60 md:grid-cols-2">
+              <li>• Quick 2P vs CPU when you&apos;re alone</li>
+              <li>• Full 4-player board + sound + captures</li>
+              <li>• Online room codes for hostel wars</li>
+              <li>• Share link → instant crowd (no install)</li>
+            </ul>
+            <Link href="/play/ludo" className="mt-8 inline-flex rounded-2xl bg-lemon px-6 py-3 font-bold text-ink">
+              Host a Ludo room
+            </Link>
           </div>
         </section>
 

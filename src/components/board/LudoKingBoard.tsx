@@ -3,6 +3,7 @@
 import { DiceRoll } from "@/components/board/DiceRoll";
 import {
   BOARD_SIZE,
+  COLORS,
   isCenterDice,
   isPathCell,
   isSafeCell,
@@ -10,10 +11,10 @@ import {
   quadrantHomeClass,
   tintedPathClass,
   tokenCell,
-  type Side,
+  type LudoColor,
 } from "@/lib/ludo/geometry";
 import type { LudoState } from "@/lib/ludo/game";
-import { movableTokenIds } from "@/lib/ludo/game";
+import { displayName, movableTokenIds } from "@/lib/ludo/game";
 
 type Props = {
   game: LudoState;
@@ -23,8 +24,6 @@ type Props = {
   rollDisabled: boolean;
   onPickToken: (id: number) => void;
   pickEnabled: boolean;
-  youLabel: string;
-  cpuLabel: string;
 };
 
 export function LudoKingBoard({
@@ -35,21 +34,19 @@ export function LudoKingBoard({
   rollDisabled,
   onPickToken,
   pickEnabled,
-  youLabel,
-  cpuLabel,
 }: Props) {
   const highlight = game.pickToken ? new Set(movableTokenIds(game, game.lastRoll)) : new Set<number>();
+  const active = new Set(game.order);
 
-  const tokens: { side: Side; id: number; r: number; c: number; label: string }[] = [];
-  (["you", "cpu"] as Side[]).forEach((side) => {
-    const list = side === "you" ? game.you : game.cpu;
-    const label = side === "you" ? youLabel : cpuLabel;
-    list.forEach((t) => {
-      const cell = tokenCell(side, t.distance, t.id);
+  const tokens: { color: LudoColor; id: number; r: number; c: number }[] = [];
+  for (const color of COLORS) {
+    if (!active.has(color)) continue;
+    game.tokens[color].forEach((t) => {
+      const cell = tokenCell(color, t.distance, t.id);
       if (!cell) return;
-      tokens.push({ side, id: t.id, r: cell[0], c: cell[1], label });
+      tokens.push({ color, id: t.id, r: cell[0], c: cell[1] });
     });
-  });
+  }
 
   const byCell = new Map<string, typeof tokens>();
   for (const t of tokens) {
@@ -79,7 +76,6 @@ export function LudoKingBoard({
             const path = isPathCell(r, c);
             const center = isCenterDice(r, c);
             const safe = isSafeCell(r, c);
-
             let bg = home ?? (path ? tintedPathClass(r, c) : "bg-emerald-900/40");
             if (center) bg = "bg-amber-100/95";
 
@@ -96,22 +92,23 @@ export function LudoKingBoard({
                   </div>
                 )}
                 {byCell.get(`${r},${c}`)?.map((t, idx) => {
-                  const meta = PLAYER_META[t.side];
-                  const canTap = pickEnabled && t.side === game.turn && highlight.has(t.id);
+                  const meta = PLAYER_META[t.color];
+                  const isTurn = game.turn === t.color;
+                  const canTap = pickEnabled && isTurn && highlight.has(t.id);
                   return (
                     <button
-                      key={`${t.side}-${t.id}`}
+                      key={`${t.color}-${t.id}`}
                       type="button"
                       disabled={!canTap}
                       onClick={() => canTap && onPickToken(t.id)}
-                      className={`absolute h-[42%] w-[42%] rounded-full border-2 border-white/90 shadow-md ring-2 ${meta.tokenClass} ${
-                        canTap ? "z-20 animate-pulse ring-4 ring-lemon" : "z-[5]"
-                      }`}
+                      className={`absolute h-[42%] w-[42%] rounded-full border-2 border-white/90 shadow-md ring-2 transition-transform ${meta.tokenClass} ${
+                        canTap ? "z-20 scale-110 animate-pulse ring-4 ring-lemon" : "z-[5]"
+                      } ${isTurn && !game.winner ? "ring-offset-1 ring-offset-lemon/40" : ""}`}
                       style={{
                         left: `${8 + (idx % 2) * 38}%`,
                         top: `${8 + Math.floor(idx / 2) * 38}%`,
                       }}
-                      aria-label={`${t.label} token ${t.id + 1}`}
+                      aria-label={`${displayName(game, t.color)} token ${t.id + 1}`}
                     />
                   );
                 })}
@@ -120,15 +117,18 @@ export function LudoKingBoard({
           })}
         </div>
       </div>
-      <div className="mt-3 flex justify-center gap-6 text-xs font-semibold">
-        <span className="flex items-center gap-2">
-          <span className="h-3 w-3 rounded-full bg-red-500" />
-          {youLabel}
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="h-3 w-3 rounded-full bg-yellow-400" />
-          {cpuLabel}
-        </span>
+      <div className="mt-3 flex flex-wrap justify-center gap-3 text-[11px] font-semibold">
+        {game.order.map((c) => (
+          <span
+            key={c}
+            className={`flex items-center gap-1.5 rounded-full px-2 py-1 ${
+              game.turn === c ? "bg-white/15 text-white" : "text-white/45"
+            }`}
+          >
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: PLAYER_META[c].color }} />
+            {displayName(game, c)}
+          </span>
+        ))}
       </div>
     </div>
   );

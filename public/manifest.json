@@ -1,0 +1,17 @@
+{
+  "name": "Campus Clash — Ludo & Board Games",
+  "short_name": "Campus Clash",
+  "description": "Ludo King-style 4P board, Monopoly, Snakes — play in browser, share with friends.",
+  "start_url": "/play/ludo",
+  "display": "standalone",
+  "background_color": "#0D1020",
+  "theme_color": "#8066ED",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

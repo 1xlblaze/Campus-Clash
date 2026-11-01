@@ -1,39 +1,80 @@
 import {
   globalTrackIndex,
   HOME_PATH,
+  PLAYER_META,
   SAFE_GLOBAL,
+  TURN_ORDER,
   TRACK_LEN,
-  TRACK_START,
-  type Side,
+  type LudoColor,
 } from "./geometry";
 
-export type LudoToken = { id: number; distance: number }; // -1 yard, 0–57 path, 58 finished
+export type LudoSetup = "quick2" | "local4" | "cpu4" | "online2";
+
+export type LudoToken = { id: number; distance: number };
 
 export type LudoState = {
-  you: LudoToken[];
-  cpu: LudoToken[];
-  turn: Side;
+  setup: LudoSetup;
+  playerCount: 2 | 4;
+  order: LudoColor[];
+  humanColors: LudoColor[];
+  tokens: Record<LudoColor, LudoToken[]>;
+  turn: LudoColor;
   lastRoll: number;
   message: string;
-  winner: Side | null;
+  winner: LudoColor | null;
   mustRoll: boolean;
   pickToken: boolean;
+  streak: number;
 };
 
-const FINISH = TRACK_LEN + HOME_PATH.you.length; // 58
+const FINISH = TRACK_LEN + HOME_PATH.red.length;
 
-export function createLudo(): LudoState {
-  const yard = () => [0, 1, 2, 3].map((id) => ({ id, distance: -1 }));
+function yard() {
+  return [0, 1, 2, 3].map((id) => ({ id, distance: -1 }));
+}
+
+function emptyTokens(): Record<LudoColor, LudoToken[]> {
+  return { red: yard(), green: yard(), yellow: yard(), blue: yard() };
+}
+
+export function createLudo(setup: LudoSetup = "quick2"): LudoState {
+  const playerCount = setup === "local4" || setup === "cpu4" ? 4 : 2;
+  const order =
+    playerCount === 2
+      ? (["red", "yellow"] as LudoColor[])
+      : TURN_ORDER;
+  const humanColors: LudoColor[] =
+    setup === "local4"
+      ? TURN_ORDER
+      : setup === "cpu4"
+        ? ["red"]
+        : ["red"];
+
   return {
-    you: yard(),
-    cpu: yard(),
-    turn: "you",
+    setup,
+    playerCount,
+    order,
+    humanColors,
+    tokens: emptyTokens(),
+    turn: "red",
     lastRoll: 0,
-    message: "Roll the dice — need a 6 to open a token.",
+    message: "Roll — you need a 6 to open a token.",
     winner: null,
     mustRoll: true,
     pickToken: false,
+    streak: 0,
   };
+}
+
+export function isHumanTurn(state: LudoState) {
+  return state.humanColors.includes(state.turn);
+}
+
+export function displayName(state: LudoState, color: LudoColor) {
+  if (state.setup === "local4") return `P${TURN_ORDER.indexOf(color) + 1} ${PLAYER_META[color].label}`;
+  if (state.humanColors.includes(color) && color === "red") return "You";
+  if (state.humanColors.includes(color)) return PLAYER_META[color].label;
+  return `CPU ${PLAYER_META[color].label}`;
 }
 
 function allFinished(tokens: LudoToken[]) {
@@ -50,116 +91,123 @@ function canMoveToken(token: LudoToken, roll: number): boolean {
   return token.distance + roll <= FINISH;
 }
 
-function applyCapture(state: LudoState, mover: Side, movedToken: LudoToken): LudoState {
-  if (movedToken.distance < 0 || movedToken.distance >= TRACK_LEN) return state;
-  const g = globalTrackIndex(mover, movedToken.distance);
+function nextInOrder(state: LudoState, extraRoll: boolean): LudoColor {
+  if (extraRoll) return state.turn;
+  const idx = state.order.indexOf(state.turn);
+  return state.order[(idx + 1) % state.order.length];
+}
+
+function applyCapture(state: LudoState, mover: LudoColor, moved: LudoToken): LudoState {
+  if (moved.distance < 0 || moved.distance >= TRACK_LEN) return state;
+  const g = globalTrackIndex(mover, moved.distance);
   if (g === null || SAFE_GLOBAL.has(g)) return state;
 
-  const opp: Side = mover === "you" ? "cpu" : "you";
-  const oppTokens = state[opp].map((t) => ({ ...t }));
+  const tokens = { ...state.tokens };
   let captured = false;
-  for (const t of oppTokens) {
-    if (t.distance < 0 || t.distance >= TRACK_LEN) continue;
-    const og = globalTrackIndex(opp, t.distance);
-    if (og === g) {
-      t.distance = -1;
-      captured = true;
-    }
+  for (const color of state.order) {
+    if (color === mover) continue;
+    tokens[color] = tokens[color].map((t) => {
+      if (t.distance < 0 || t.distance >= TRACK_LEN) return t;
+      if (globalTrackIndex(color, t.distance) === g) {
+        captured = true;
+        return { ...t, distance: -1 };
+      }
+      return t;
+    });
   }
   if (!captured) return state;
-  return { ...state, [opp]: oppTokens, message: "Capture! Token sent to yard." };
+  return { ...state, tokens, message: "Capture! Token sent back to yard.", streak: state.streak + 1 };
 }
 
 export function ludoRoll(state: LudoState, roll: number): LudoState {
   if (state.winner || !state.mustRoll || state.pickToken) return state;
-  const side = state.turn;
-  const tokens = side === "you" ? state.you : state.cpu;
-  const movable = tokens.filter((t) => canMoveToken(t, roll));
-  const who = side === "you" ? "You" : "CPU";
+  const color = state.turn;
+  const list = state.tokens[color];
+  const movable = list.filter((t) => canMoveToken(t, roll));
+  const who = displayName(state, color);
 
   if (movable.length === 0) {
-    const msg =
-      roll === 6
-        ? `${who} rolled 6 — no move. Roll again.`
-        : `${who} rolled ${roll} — no legal move.`;
+    const msg = roll === 6 ? `${who} rolled 6 — no move. Roll again.` : `${who} rolled ${roll} — no move.`;
     if (roll === 6) {
-      return { ...state, lastRoll: roll, message: msg, mustRoll: true, turn: side };
+      return { ...state, lastRoll: roll, message: msg, mustRoll: true };
     }
     return {
       ...state,
       lastRoll: roll,
       message: msg,
-      turn: side === "you" ? "cpu" : "you",
+      turn: nextInOrder(state, false),
       mustRoll: true,
       pickToken: false,
     };
   }
 
-  if (movable.length > 1 && side === "you") {
+  if (movable.length > 1 && isHumanTurn(state)) {
     return {
       ...state,
       lastRoll: roll,
-      message: `You rolled ${roll} — tap a token to move.`,
+      message: `${who} rolled ${roll} — tap a token.`,
       mustRoll: false,
       pickToken: true,
     };
   }
 
-  const id = side === "cpu" ? cpuPickToken(state, roll) : movable[0].id;
+  const id = isHumanTurn(state) ? movable[0].id : cpuPickToken(state, roll);
   return applyLudoMove(state, id, roll);
 }
 
 export function applyLudoMove(state: LudoState, tokenId: number, roll: number): LudoState {
-  const side = state.turn;
-  const key = side;
-  const tokens = state[key].map((t) => ({ ...t }));
-  const t = tokens.find((x) => x.id === tokenId);
+  const color = state.turn;
+  const list = state.tokens[color].map((t) => ({ ...t }));
+  const t = list.find((x) => x.id === tokenId);
   if (!t || !canMoveToken(t, roll)) return state;
 
   if (t.distance === -1) t.distance = 0;
   else t.distance += roll;
 
+  const tokens = { ...state.tokens, [color]: list };
   let next: LudoState = {
     ...state,
-    [key]: tokens,
+    tokens,
     lastRoll: roll,
-    message: roll === 6 && t.distance === 0 ? "Token is out! Roll again." : `Moved ${roll} steps.`,
+    message: roll === 6 && t.distance === 0 ? "Token out! Roll again." : `Moved ${roll} steps.`,
     pickToken: false,
     mustRoll: roll === 6,
-    turn: roll === 6 ? side : side === "you" ? "cpu" : "you",
+    turn: nextInOrder(state, roll === 6),
   };
 
-  next = applyCapture(next, side, t);
+  next = applyCapture(next, color, t);
 
-  if (allFinished(tokens)) {
-    return {
-      ...next,
-      winner: side,
-      message: side === "you" ? "You win! All tokens home." : "CPU wins!",
-      mustRoll: false,
-      pickToken: false,
-    };
+  if (allFinished(list)) {
+    const winMsg =
+      color === "red" && state.humanColors.includes("red")
+        ? "You win! All four tokens home."
+        : `${displayName(state, color)} wins!`;
+    return { ...next, winner: color, message: winMsg, mustRoll: false, pickToken: false };
   }
 
   return next;
 }
 
 export function cpuPickToken(state: LudoState, roll: number): number {
-  const movable = state.cpu.filter((t) => canMoveToken(t, roll));
+  const color = state.turn;
+  const movable = state.tokens[color].filter((t) => canMoveToken(t, roll));
   if (!movable.length) return 0;
 
   const score = (t: LudoToken) => {
     let s = 0;
     const nd = t.distance === -1 ? 0 : t.distance + roll;
-    if (t.distance === -1) s += 5;
-    if (nd >= FINISH) s += 100;
-    if (nd >= TRACK_LEN) s += 40;
+    if (t.distance === -1) s += 8;
+    if (nd >= FINISH) s += 120;
+    if (nd >= TRACK_LEN) s += 35;
     if (nd >= 0 && nd < TRACK_LEN) {
-      const g = globalTrackIndex("cpu", nd);
+      const g = globalTrackIndex(color, nd);
       if (g !== null && !SAFE_GLOBAL.has(g)) {
-        for (const o of state.you) {
-          if (o.distance < 0 || o.distance >= TRACK_LEN) continue;
-          if (globalTrackIndex("you", o.distance) === g) s += 60;
+        for (const opp of state.order) {
+          if (opp === color) continue;
+          for (const o of state.tokens[opp]) {
+            if (o.distance < 0 || o.distance >= TRACK_LEN) continue;
+            if (globalTrackIndex(opp, o.distance) === g) s += 70;
+          }
         }
       }
     }
@@ -169,11 +217,14 @@ export function cpuPickToken(state: LudoState, roll: number): number {
   return movable.sort((a, b) => score(b) - score(a))[0].id;
 }
 
-export function ludoTurnSeat(turn: Side): "p1" | "p2" {
-  return turn === "you" ? "p1" : "p2";
+export function movableTokenIds(state: LudoState, roll: number): number[] {
+  return state.tokens[state.turn].filter((t) => canMoveToken(t, roll)).map((t) => t.id);
 }
 
-export function movableTokenIds(state: LudoState, roll: number): number[] {
-  const tokens = state.turn === "you" ? state.you : state.cpu;
-  return tokens.filter((t) => canMoveToken(t, roll)).map((t) => t.id);
+export function ludoTurnSeat(turn: LudoColor): "p1" | "p2" {
+  return turn === "red" ? "p1" : "p2";
+}
+
+export function isBotTurn(state: LudoState) {
+  return !state.humanColors.includes(state.turn);
 }

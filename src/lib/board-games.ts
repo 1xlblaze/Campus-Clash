@@ -13,7 +13,7 @@ export const boardGames: BoardGame[] = [
   {
     id: "ludo",
     title: "Ludo King",
-    subtitle: "Classic cross board — 4 tokens, captures, home stretch.",
+    subtitle: "4P table, sound, WhatsApp rooms — Ludo King rules.",
     icon: "🎲",
     tag: "Classic",
     players: "You vs CPU",
